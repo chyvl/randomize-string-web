@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Randomize Text with Loading Effect</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input, button { margin: 5px 0; }
+
+        /* Loading overlay styles */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Text Randomizer</h2>
+
+<!-- Input Section -->
+<label for="inputText">Insert any text or number:</label>
+<input type="text" id="inputText" placeholder="Enter text here"><br>
+<button onclick="addString()">Add to List</button>
+<button onclick="emptyStored()">Empty Stored</button><br><br>
+
+<!-- List Management Section -->
+<h3>Manage List</h3>
+<ul id="stringList"></ul>
+
+<!-- Modify & Remove input fields -->
+<label for="removeIndex">Remove at index:</label>
+<input type="number" id="removeIndex" placeholder="Index"><button onclick="removeString()">Remove</button><br>
+
+<label for="modifyIndex">Modify at index:</label>
+<input type="number" id="modifyIndex" placeholder="Index">
+<input type="text" id="modifyText" placeholder="New Text"><button onclick="modifyString()">Modify</button><br>
+
+<!-- Checkboxes and Number Input -->
+<h3>Randomize Settings</h3>
+<label for="showAgain">Allow the same string to be shown again?</label>
+<input type="checkbox" id="showAgain" checked><br>
+
+<label for="numberToShow">Number of strings to show:</label>
+<input type="number" id="numberToShow" placeholder="How many strings" min="1"><br><br>
+
+<!-- Action Button -->
+<button onclick="startRandomization()">Do it!</button><br><br>
+
+<!-- Output Section -->
+<h3>Randomized Output</h3>
+<ul id="randomizedOutput"></ul>
+
+<!-- Shown Strings Section -->
+<h3>Shown Randomized List</h3>
+<ul id="shownList"></ul>
+<button onclick="emptyShown()">Empty Shown</button><br><br>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">Loading...</div>
+</div>
+
+<script>
+// List to store strings
+let strings = [];
+let shownStrings = [];
+
+// Add a string to the list
+function addString() {
+    const inputText = document.getElementById('inputText').value;
+    if (!inputText) {
+        alert("Please enter a valid text or number.");
+        return;
+    }
+    strings.push(inputText);
+    updateStringList();
+    document.getElementById('inputText').value = ""; // Clear input field
+}
+
+// Remove a string at a specific index
+function removeString() {
+    const index = parseInt(document.getElementById('removeIndex').value);
+    if (isNaN(index) || index < 0 || index >= strings.length) {
+        alert("Invalid index.");
+        return;
+    }
+    strings.splice(index, 1);
+    updateStringList();
+    document.getElementById('removeIndex').value = ""; // Clear input field
+}
+
+// Modify a string at a specific index
+function modifyString() {
+    const index = parseInt(document.getElementById('modifyIndex').value);
+    const newText = document.getElementById('modifyText').value;
+    if (isNaN(index) || index < 0 || index >= strings.length || !newText) {
+        alert("Invalid index or text.");
+        return;
+    }
+    strings[index] = newText;
+    updateStringList();
+    document.getElementById('modifyIndex').value = ""; // Clear input fields
+    document.getElementById('modifyText').value = "";
+}
+
+// Update the displayed list of strings
+function updateStringList() {
+    const stringList = document.getElementById('stringList');
+    stringList.innerHTML = "";
+    strings.forEach((str, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${index}: ${str}`;
+        stringList.appendChild(listItem);
+    });
+}
+
+// Empty the stored list
+function emptyStored() {
+    strings = [];
+    updateStringList();
+}
+
+// Fisher-Yates Shuffle algorithm for true randomization
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+    }
+}
+
+// Randomize and show strings
+function randomizeStrings() {
+    const showAgain = document.getElementById('showAgain').checked;
+    const numberToShow = parseInt(document.getElementById('numberToShow').value);
+    
+    if (isNaN(numberToShow) || numberToShow <= 0) {
+        alert("Please enter a valid number for how many strings to show.");
+        return;
+    }
+
+    if (strings.length === 0) {
+        alert("The list is empty. Add some strings first.");
+        return;
+    }
+
+    if (numberToShow > strings.length) {
+        alert(`Only ${strings.length} strings are available.`);
+        return;
+    }
+
+    let availableStrings = [...strings]; // Copy the list to work with
+
+    // Shuffle the available strings for true randomization
+    shuffle(availableStrings);
+
+    const randomizedOutput = availableStrings.slice(0, numberToShow); // Get the required number of strings
+
+    // If not allowing duplicates, remove shown strings from the original list
+    if (!showAgain) {
+        randomizedOutput.forEach(item => {
+            const indexToRemove = strings.indexOf(item);
+            if (indexToRemove !== -1) {
+                strings.splice(indexToRemove, 1); // Remove from original list
+            }
+        });
+    }
+
+    // Add the shown strings to the "shown" list
+    shownStrings.push(...randomizedOutput);
+    updateShownList();
+    displayRandomizedOutput(randomizedOutput);
+    updateStringList(); // Update the list view after potential removal
+}
+
+// Display the randomized output
+function displayRandomizedOutput(output) {
+    const outputList = document.getElementById('randomizedOutput');
+    outputList.innerHTML = "";
+    output.forEach(str => {
+        const listItem = document.createElement('li');
+        listItem.textContent = str;
+        outputList.appendChild(listItem);
+    });
+}
+
+// Update the shown strings list
+function updateShownList() {
+    const shownList = document.getElementById('shownList');
+    shownList.innerHTML = "";
+    shownStrings.forEach((str, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${index}: ${str}`;
+        shownList.appendChild(listItem);
+    });
+}
+
+// Empty the shown randomized list
+function emptyShown() {
+    shownStrings = [];
+    updateShownList();
+}
+
+// Start the randomization process with a loading effect
+function startRandomization() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    // Show loading overlay
+    loadingOverlay.style.display = 'flex';
+    
+    // Wait for 3 seconds and then show the result
+    setTimeout(() => {
+        loadingOverlay.style.display = 'none'; // Hide loading after 3 seconds
+        randomizeStrings(); // Perform the randomization
+    }, 3000);
+}
+</script>
+
+</body>
+</html>
